@@ -1,9 +1,11 @@
 """Hyperparameters for Dynamic Pattern Routing (DPR)."""
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Literal, Optional
 
-from basicts.modules.dpr import TemporalContextualGating
+from torch import nn
+
+from basicts.modules.dpr import build_response_adapter
 
 
 @dataclass
@@ -19,6 +21,7 @@ class DPRConfig:
     """
 
     enabled: bool = False
+    adapter_type: Literal["dpr", "global_se", "local_se", "local_film", "gated_residual"] = "dpr"
     num_patterns: int = 8
     orth_lambda: float = 0.01
     use_multiscale: bool = True
@@ -26,10 +29,11 @@ class DPRConfig:
     identity_init: bool = True
     discrete_topk: int = 1
 
-    def build_module(self, d_model: int) -> Optional[TemporalContextualGating]:
+    def build_module(self, d_model: int) -> Optional[nn.Module]:
         if not self.enabled:
             return None
-        return TemporalContextualGating(
+        return build_response_adapter(
+            adapter_type=self.adapter_type,
             d_model=d_model,
             num_patterns=self.num_patterns,
             use_multiscale=self.use_multiscale,

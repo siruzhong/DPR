@@ -136,3 +136,145 @@ class TemporalContextualGating(nn.Module):
 
         aux: Dict[str, torch.Tensor] = {"routing_probs": p.detach()}
         return out, aux
+
+
+def _resolve_kernels(use_multiscale: bool, conv_kernels: Optional[Sequence[int]]) -> tuple[int, ...]:
+    if conv_kernels is None:
+        return (3, 7) if use_multiscale else (1,)
+    kernels = tuple(int(k) for k in conv_kernels)
+    if not kernels or any(k <= 0 for k in kernels):
+        raise ValueError(f"Invalid conv_kernels: {kernels}")
+    return kernels
+
+
+class _LocalPerception(nn.Module):
+    def __init__(self, d_model: int, kernels: Sequence[int]):
+        super().__init__()
+        self.layers = nn.ModuleList(
+            nn.Conv1d(d_model, d_model, k, padding="same", groups=d_model)
+            for k in kernels
+        )
+        self.output_size = len(self.layers) * d_model
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        xt = x.transpose(1, 2)
+        return torch.cat([layer(xt) for layer in self.layers], dim=1).transpose(1, 2)
+
+
+def _matched_bottleneck(input_size: int, output_size: int, fixed_params: int, target_params: int) -> int:
+    best = min(
+        range(1, max(2, target_params // max(1, input_size) + 2)),
+        key=lambda width: abs(
+            fixed_params + input_size * width + width + width * output_size + output_size - target_params
+        ),
+    )
+    return max(1, best)
+
+
+class GlobalSEAdapter(nn.Module):
+    def __init__(self, d_model: int, target_params: int):
+        super().__init__()
+        width = _matched_bottleneck(d_model, d_model, 1, target_params)
+        self.mlp = nn.Sequential(nn.Linear(d_model, width), nn.GELU(), nn.Linear(width, d_model))
+        self.gamma = nn.Parameter(torch.tensor(0.1))
+        nn.init.zeros_(self.mlp[-1].weight)
+        nn.init.zeros_(self.mlp[-1].bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        gate = 2.0 * torch.sigmoid(self.mlp(x.mean(dim=1, keepdim=True))) - 1.0
+        return x * (1.0 + self.gamma * gate)
+
+
+class LocalSEAdapter(nn.Module):
+    def __init__(self, d_model: int, kernels: Sequence[int], target_params: int):
+        super().__init__()
+        self.perception = _LocalPerception(d_model, kernels)
+        fixed = sum(p.numel() for p in self.perception.parameters()) + 1
+        width = _matched_bottleneck(self.perception.output_size, d_model, fixed, target_params)
+        self.mlp = nn.Sequential(
+            nn.Linear(self.perception.output_size, width), nn.GELU(), nn.Linear(width, d_model)
+        )
+        self.gamma = nn.Parameter(torch.tensor(0.1))
+        nn.init.zeros_(self.mlp[-1].weight)
+        nn.init.zeros_(self.mlp[-1].bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        gate = 2.0 * torch.sigmoid(self.mlp(self.perception(x))) - 1.0
+        return x * (1.0 + self.gamma * gate)
+
+
+class LocalFiLMAdapter(nn.Module):
+    def __init__(self, d_model: int, kernels: Sequence[int], target_params: int):
+        super().__init__()
+        self.d_model = d_model
+        self.perception = _LocalPerception(d_model, kernels)
+        fixed = sum(p.numel() for p in self.perception.parameters()) + 1
+        width = _matched_bottleneck(self.perception.output_size, 2 * d_model, fixed, target_params)
+        self.mlp = nn.Sequential(
+            nn.Linear(self.perception.output_size, width), nn.GELU(), nn.Linear(width, 2 * d_model)
+        )
+        self.gamma = nn.Parameter(torch.tensor(0.1))
+        nn.init.zeros_(self.mlp[-1].weight)
+        nn.init.zeros_(self.mlp[-1].bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        scale, shift = self.mlp(self.perception(x)).chunk(2, dim=-1)
+        return x * (1.0 + self.gamma * torch.tanh(scale)) + self.gamma * shift
+
+
+class GatedResidualAdapter(nn.Module):
+    def __init__(self, d_model: int, kernels: Sequence[int], target_params: int):
+        super().__init__()
+        self.perception = _LocalPerception(d_model, kernels)
+        fixed = sum(p.numel() for p in self.perception.parameters()) + 1
+        width = _matched_bottleneck(self.perception.output_size, d_model, fixed, target_params)
+        self.mlp = nn.Sequential(
+            nn.Linear(self.perception.output_size, width), nn.GELU(), nn.Linear(width, d_model)
+        )
+        self.gamma = nn.Parameter(torch.tensor(0.1))
+        nn.init.zeros_(self.mlp[-1].weight)
+        nn.init.zeros_(self.mlp[-1].bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        residual = torch.tanh(self.mlp(self.perception(x)))
+        return x + self.gamma * residual
+
+
+def build_response_adapter(
+    adapter_type: str,
+    d_model: int,
+    num_patterns: int = 8,
+    use_multiscale: bool = True,
+    conv_kernels: Optional[Sequence[int]] = None,
+    identity_init: bool = True,
+    discrete_topk: int = 1,
+) -> nn.Module:
+    """Build DPR or a parameter-matched conditional-modulation control."""
+    kernels = _resolve_kernels(use_multiscale, conv_kernels)
+    dpr = TemporalContextualGating(
+        d_model=d_model,
+        num_patterns=num_patterns,
+        use_multiscale=use_multiscale,
+        conv_kernels=kernels,
+        identity_init=identity_init,
+        discrete_topk=discrete_topk,
+    )
+    if adapter_type == "dpr":
+        return dpr
+    target_params = sum(p.numel() for p in dpr.parameters())
+    if adapter_type == "global_se":
+        return GlobalSEAdapter(d_model, target_params)
+    if adapter_type == "local_se":
+        return LocalSEAdapter(d_model, kernels, target_params)
+    if adapter_type == "local_film":
+        return LocalFiLMAdapter(d_model, kernels, target_params)
+    if adapter_type == "gated_residual":
+        return GatedResidualAdapter(d_model, kernels, target_params)
+    raise ValueError(f"Unknown response adapter type: {adapter_type}")
+
+
+def response_adapter_orthogonal_loss(adapter: nn.Module, weight: float) -> Optional[torch.Tensor]:
+    mode_table = getattr(adapter, "mode_table", None)
+    if mode_table is None or weight <= 0:
+        return None
+    return weight * dpr_orthogonal_loss(mode_table)

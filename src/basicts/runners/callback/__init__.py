@@ -4,6 +4,7 @@ from .clip_grad import GradientClipping
 from .curriculum_learrning import CurriculumLearning
 from .dynamic_dropout import DropoutTSCallback
 from .early_stopping import EarlyStopping
+from .rebuttal_profile import RebuttalProfiler
 from .grad_accumulation import GradAccumulation
 from .log_dpr_routing import LogDPRRouting
 from .no_bp import NoBP
@@ -16,7 +17,7 @@ __ALL__ = [
     'GradientClipping',
     'CurriculumLearning',
     'DropoutTSCallback',
-    'EarlyStopping',
+    'EarlyStopping', 'RebuttalProfiler',
     'GradAccumulation',
     'LogDPRRouting',
     'NoBP',

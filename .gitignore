@@ -1,5 +1,8 @@
 __pycache__/
-docs/
+docs/*.md
+artifacts/
 checkpoints
 checkpoints_*/
 datasets
+logs/
+*.npz

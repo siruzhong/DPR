@@ -6,7 +6,7 @@ from basicts.modules.decomposition import MovingAverageDecomposition
 from basicts.modules.embed import PatchEmbedding
 from basicts.modules.mlps import MLPLayer
 from basicts.modules.norm import RevIN
-from basicts.modules.dpr import TemporalContextualGating, dpr_orthogonal_loss
+from basicts.modules.dpr import TemporalContextualGating, response_adapter_orthogonal_loss
 from basicts.modules.transformer import (Encoder, EncoderLayer,
                                          MultiHeadAttention)
 from torch import nn
@@ -17,7 +17,7 @@ from .patchtst_layers import PatchTSTBatchNorm, PatchTSTHead
 
 def _apply_dpr_bnpd(
     hidden_states: torch.Tensor,
-    dpr: Optional[TemporalContextualGating],
+    dpr: Optional[nn.Module],
     orth_lambda: float,
 ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     """Reshape [B,N,P,d] -> DPR on [B*N,P,d] (conv along patch/time only) -> restore."""
@@ -26,12 +26,16 @@ def _apply_dpr_bnpd(
         return hidden_states, extra
     b, n, p, d = hidden_states.shape
     flat = hidden_states.reshape(b * n, p, d)
-    flat, dpr_aux = dpr(flat, return_aux=True)
+    if isinstance(dpr, TemporalContextualGating):
+        flat, dpr_aux = dpr(flat, return_aux=True)
+    else:
+        flat, dpr_aux = dpr(flat), None
     hidden_states = flat.reshape(b, n, p, d)
     if dpr_aux and "routing_probs" in dpr_aux:
         extra["routing_probs"] = dpr_aux["routing_probs"]
-    if orth_lambda > 0:
-        extra["dpr_orth"] = orth_lambda * dpr_orthogonal_loss(dpr.mode_table)
+    orthogonal = response_adapter_orthogonal_loss(dpr, orth_lambda)
+    if orthogonal is not None:
+        extra["dpr_orth"] = orthogonal
     return hidden_states, extra
 
 
