@@ -6,9 +6,9 @@ We thank the reviewer for the careful reading and constructive questions about D
 
 > **Q1: How were the DPR insertion points selected? Were earlier-layer or multi-layer insertions considered?**
 
-**A1:** We use one predefined late-stage integration rule for all seven host architectures: DPR is applied to the hidden representation immediately before the corresponding prediction head. For multi-scale or multi-branch backbones, the same DPR adapter is reused at the corresponding late-stage representations rather than introducing independent adapters. This rule preserves the backbone's original feature extraction and hyperparameters, gives DPR a contextualized representation to recalibrate, and keeps the intervention and cost comparable across heterogeneous architectures. The insertion points were chosen by this common structural rule rather than through backbone-specific tuning.
+**A1:** We use one predefined late-stage integration rule for all seven host architectures: DPR is applied to the hidden representation immediately before the corresponding prediction head. For multi-scale or multi-branch backbones, the same DPR adapter is reused at the corresponding late-stage representations rather than introducing independent adapters. This preserves the backbone's feature extractor and hyperparameters, provides contextualized features for recalibration, and keeps the intervention comparable across architectures. We chose insertion points by this structural rule, without backbone-specific tuning.
 
-Earlier-layer and multi-layer placements were intentionally outside the scope of this study. They introduce a large, backbone-dependent design space over layer locations, sharing strategies, adapter counts, and computation. Our goal is to evaluate the DPR mechanism under one controlled minimal-intervention protocol, rather than optimize a different adapter architecture for each backbone. Such a search would confound the mechanism-level comparison with architecture-specific retuning. Importantly, DPR improves diverse backbones without insertion-position search, providing strong evidence for its robustness and backbone-agnostic applicability.
+Earlier-layer and multi-layer placements were outside the scope of this study because they introduce a backbone-dependent design space over layer locations, sharing strategies, adapter counts, and computation. Our goal is to evaluate DPR under one controlled minimal-intervention protocol rather than optimize a different adapter for each backbone. The reported gains show that this single placement rule transfers across diverse backbones; they do not establish that it is optimal for each architecture.
 
 > **Q2: Does the DPR improvement correlate with the non-stationarity diagnostics?**
 
@@ -21,9 +21,9 @@ Earlier-layer and multi-layer placements were intentionally outside the scope of
 | Volatility-of-Volatility | 0.622 | 0.031 | Positive association |
 | Composite rank score | 0.703 | 0.011 | Strongest positive association |
 
-VoV is most directly aligned with DPR because it measures changes in local volatility, whereas spectral entropy measures frequency complexity and ADF mainly tests global unit-root behavior; neither necessarily indicates changing local response requirements. The composite score, defined as `rank(spectral entropy) + rank(VoV)`, combines the two local-pattern diagnostics and shows the strongest association. Given the small sample of twelve datasets and the related diagnostics, we interpret these unadjusted correlations as exploratory evidence rather than a causal result.
+VoV is most directly aligned with DPR because it measures changes in local volatility, whereas spectral entropy measures frequency complexity and ADF mainly tests global unit-root behavior; neither necessarily indicates changing local response requirements. The composite score, defined as `rank(spectral entropy) + rank(VoV)`, combines these complementary diagnostics and shows the strongest association. Given the twelve-dataset sample and the related diagnostics, we interpret these unadjusted correlations as exploratory rather than causal evidence.
 
-This analysis therefore supports a specific relationship between DPR improvement and changing local volatility, rather than a generic correlation with every notion of non-stationarity. It also clarifies our scope: static pattern response is a regime-dependent limitation, not an equally severe bottleneck on every dataset. See Reviewer Lms2, Q2/A2 and Reviewer 8uUP, Q2/A2.
+The result supports a narrower relationship between DPR improvement and changing local volatility, not a generic association with every notion of non-stationarity. Accordingly, we will describe static pattern response as a regime-dependent limitation rather than an equally severe bottleneck on every dataset.
 
 > **Q3: How is DPR related to FiLM and SE-style recalibration?**
 
@@ -36,21 +36,21 @@ This analysis therefore supports a specific relationship between DPR improvement
 | Granularity | One scale per channel, broadcast across spatial positions | One scale/shift per feature map, spatially agnostic in the original CNN model | One feature-response vector per temporal token |
 | Main purpose | Model global channel interdependencies | General-purpose conditional transformation | Adapt to local regime changes within one sequence |
 
-The essential difference is that SE globally summarizes the current representation, while FiLM directly maps a condition to affine coefficients. DPR instead separates local pattern recognition from response generation: `Perceive` extracts local temporal context, `Route` matches it to learned centroids, and `Modulate` combines reusable response bases. This structured factorization supports response reuse and smooth interpolation as temporal regimes change.
+SE globally summarizes the current representation, while FiLM directly maps a condition to affine coefficients. DPR instead factorizes response generation: `Perceive` extracts local temporal context, `Route` matches it to learned centroids, and `Modulate` combines shared response bases. This constrains the gain to a low-dimensional, continuously varying response family rather than unconstrained direct prediction.
 
-Both SE and FiLM can be adapted to time series. A direct SE adaptation pools over time and remains sequence-level. FiLM is more general and can use a token-wise temporal conditioner; our claim does not rely on this being impossible. Even under this stronger Local FiLM setting with the same local context as DPR, FiLM directly predicts coefficients, whereas DPR generates them through explicit pattern routing and a shared response basis. Reviewer Lms2, Q1/A1 provides this parameter-matched comparison. Thus, DPR is operator-related to SE/FiLM but introduces a distinct, time-series-specific conditioning and response-generation mechanism.
+Both SE and FiLM can be adapted to time series. A direct SE adaptation pools over time and remains sequence-level. FiLM can also use a token-wise temporal conditioner; our claim does not rely on this being impossible. Even under this stronger Local FiLM setting with the same local context as DPR, FiLM directly predicts coefficients, whereas DPR uses explicit pattern routing and a shared response basis. Reviewer Lms2, Q1/A1 reports the parameter-matched controls. DPR is therefore related to SE/FiLM at the operator level but differs in its temporal conditioning and factorized response generation.
 
 > **Q4: Is DPR feature-wise modulation rather than expert selection, and is it less expressive than MoE?**
 
-**A4:** DPR is better viewed as continuous feature-response composition than conventional expert selection. Its expressiveness should not be described as simply lower than MoE because the two mechanisms parameterize different conditional responses. A Top-K MoE selects a discrete subset of complete expert transformations. DPR instead softly combines all learned response bases into a token-specific feature response, producing a continuum of possible modulations. This is particularly suitable for time series, where regimes often overlap or evolve gradually rather than switching between isolated experts.
+**A4:** DPR is better viewed as continuous feature-response composition than conventional expert selection. Its expressiveness should not be described as simply lower than MoE because the two mechanisms parameterize different conditional responses. A Top-K MoE selects a discrete subset of complete expert transformations. DPR instead softly combines all learned response bases into a token-specific feature response, producing a continuum of possible modulations. This design is motivated by time-series regimes that overlap or evolve gradually rather than switching between isolated experts.
 
-This simpler structure does not sacrifice empirical effectiveness. Table 5 (`DPR vs. MoE Routing`) uses the identical DPRNet backbone and replaces DPR with an 8-expert Top-K MoE. DPR uses only 325K-602K parameters versus 818K-1.1M for MoE, yet achieves substantially lower MSE. On ILI, MoE Top-1/2/4 is 20.7%/21.9%/34.7% worse than DPR; on ETTh1, it is 4.8%/6.8%/6.2% worse. MoE also incurs markedly higher training and inference time. These controlled results show that additional expert complexity is neither necessary nor beneficial here: DPR provides a more effective and efficient form of conditional expressiveness for local temporal adaptation, while avoiding discrete-routing and load-balancing overhead.
+Table 5 (`DPR vs. MoE Routing`) uses the same DPRNet setting and replaces DPR with an 8-expert Top-K MoE. DPR uses 325K-602K parameters versus 818K-1.1M for MoE and obtains lower MSE in the two evaluated datasets. On ILI, MoE Top-1/2/4 is 20.7%/21.9%/34.7% worse than DPR; on ETTh1, it is 4.8%/6.8%/6.2% worse. MoE also incurs higher training and inference time. These controls do not establish a universal expressiveness ordering; they show that DPR provides a parameter-efficient response class for the settings tested.
 
 > **Q5: How should DPR behave when the useful signal is mainly exogenous?**
 
 **A5:** The current DPR formulation performs dynamic recalibration using local hidden representations derived from the observed endogenous history, which is the setting evaluated in this work. Changes in this local temporal context alter the routing distribution and therefore the backbone's feature response at each timestamp.
 
-If a regime change is visible only in exogenous variables and has not yet manifested in the endogenous history, the current DPR cannot anticipate it. In that setting, the identity-initialized residual modulation limits disruption and leaves the host backbone responsible for the available signal, but it does not remove this information limitation. When exogenous covariates are available, their encodings could be fused with DPR's local context query and used jointly for routing while retaining the soft response-basis combination and modulation. We view such exogenous-conditioned recalibration as a promising direction for future work.
+If a regime change is visible only in exogenous variables and has not yet manifested in the endogenous history, the current DPR cannot anticipate it. The residual path can limit disruption but does not remove this information limitation. When exogenous covariates are available, their encodings could be fused with DPR's local context query and used jointly for routing while retaining the soft response-basis combination. We view such exogenous-conditioned recalibration as future work.
 
 ## Response to Reviewer Lms2
 
@@ -58,7 +58,7 @@ We thank the reviewer for focusing the discussion on novelty, statistical stabil
 
 > **Q1: Is DPR technically distinct from FiLM, SE-style recalibration, dynamic convolution, and gated residual adapters? Can the authors add parameter-matched local modulation baselines?**
 
-**A1:** Please see Reviewer 9TTx, Q3/A3 for the operator-level distinction. The key controlled question is whether DPR's pattern-basis factorization contributes beyond direct local gating. We compare five adapters at the identical late-stage insertion point:
+**A1:** DPR, FiLM, and SE all perform conditional feature modulation, but DPR parameterizes the response as a routed soft combination of shared bases rather than predicting a gate or affine coefficients directly. To test whether this factorization contributes beyond direct local gating, we compare five adapters at the same late-stage insertion point:
 
 - `Global SE`: global temporal pooling followed by bottleneck excitation.
 - `Local SE`: DPR's local perception followed directly by a sigmoid feature gate.
@@ -66,7 +66,7 @@ We thank the reviewer for focusing the discussion on novelty, statistical stabil
 - `Gated residual`: the same local perception followed by a direct residual gate.
 - `DPR`: local perception, cosine routing, response-basis combination, and residual modulation.
 
-The local baselines use the same context input, receptive field, insertion point, and training budget as DPR. Their bottlenecks are chosen once to match DPR's added parameters within 5%. We use four predeclared representative settings---ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and ETTh1 (`96->96`)---covering small, volatile, financial, and hourly regimes. Only the response-generation mechanism differs. The newly added Crossformer and WPMixer comparisons use the fixed submitted DPR configuration (`K=8`, `lambda_orth=1e-4`), with no configuration selection using test performance.
+The local baselines share DPR's context input, receptive field, insertion point, and training budget. Their bottlenecks are fixed to match DPR's added parameters within 5%. We use four predeclared settings---ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and ETTh1 (`96->96`)---covering small, volatile, financial, and hourly regimes. The Crossformer and WPMixer comparisons use the submitted DPR configuration (`K=8`, `lambda_orth=1e-4`), without test-based configuration selection.
 
 | Backbone | Adapter | ILI 24->24 | COVID19 36->7 | VIX 96->96 | ETTh1 96->96 |
 |---|---|---|---|---|---|
@@ -89,23 +89,23 @@ The local baselines use the same context input, receptive field, insertion point
 | WPMixer | Gated residual | 3.177/1.046 | 0.321/0.214 | 0.949/0.548 | 0.383/0.389 |
 | WPMixer | DPR | 2.796/1.046 | 0.318/0.218 | 0.938/0.538 | 0.381/0.387 |
 
-Across the three backbones, DPR achieves the outright lowest MSE in eight of the twelve settings and ties for the lowest in one more. On PatchTST, it leads on ILI and VIX and ties Global SE on ETTh1, while gated residual is best on COVID19. It leads on ILI, COVID19, and ETTh1 for Crossformer, while Global SE is best on VIX; for WPMixer, it leads on ILI, COVID19, and VIX, while Local FiLM is best on ETTh1. These exceptions also show that no modulation mechanism dominates every regime.
+Across the three displayed backbones, DPR has the lowest MSE in eight of twelve settings and ties for the lowest in one. It leads on ILI and VIX for PatchTST; ILI, COVID19, and ETTh1 for Crossformer; and ILI, COVID19, and VIX for WPMixer. Other adapters lead in the remaining settings. The complete control also includes TimeMixer: DPR leads on ILI but not on the other three datasets. Thus, the comparison indicates that the factorized response is useful in several regimes, not that it dominates every setting.
 
-Dynamic convolution conditions a full kernel or full transformation, whereas DPR applies a diagonal gain to an existing representation. It is more expressive but usually more expensive; our MoE and parameter-scaling controls address this broader conditional-capacity alternative.
+Dynamic convolution conditions a full kernel or transformation, whereas DPR applies a diagonal gain to an existing representation. Our controls do not include a direct dynamic-convolution adapter; the MoE and parameter-scaling studies instead test broader conditional capacity and scaling.
 
 > **Q2: Are the empirical claims stronger than the main table supports?**
 
 **A2:** We agree that DPRNet is not uniformly best on all twelve datasets and will remove wording that suggests universal SOTA. DPRNet is intentionally minimalist: it isolates dynamic recalibration rather than combining it with a highly specialized backbone.
 
-The stronger evidence is the controlled adapter study: one DPR design is inserted into seven heterogeneous, otherwise fixed backbones, improving 61 of the 70 pairs summarized in the compact main table, with the complete 84-pair results reported in Appendix E. The largest gains occur on volatile datasets. This breadth is difficult to explain by tuning one architecture to one benchmark. We therefore state the precise claim: DPR mitigates a regime-dependent limitation and is most useful when local response requirements change within a sequence. Small changes on stable ETT datasets are described as neutral or marginal. See Reviewer 9TTx, Q2/A2 and Reviewer 8uUP, Q3/A3.
+Our main evidence is the controlled adapter study: one DPR design is inserted into seven otherwise fixed backbones, with lower MSE in 61 of the 70 pairs summarized in the compact main table; Appendix E reports all 84 pairs. Gains are generally larger on volatile datasets and small on the stable ETT datasets. We therefore make the narrower claim that DPR is a transferable, regime-dependent adapter whose benefit is greatest when local response requirements change. Reviewer 9TTx, Q2/A2 provides the quantitative regime analysis.
 
 > **Q3: How stable are the gains over multiple random seeds, especially on small datasets and tiny ETT improvements?**
 
-**A3:** We report paired three-seed results for `Base` and `+DPR`. Within each seed, Base and DPR use identical initialization control, data order, and training settings. We show four complementary backbones: Informer (2021), PatchTST (2023), WPMixer, and TimeFilter (2025), covering transformer-, patch-, mixing-, and filtering-based designs.
+**A3:** We report a descriptive paired three-seed check for `Base` and `+DPR`. Within each seed, the pair uses the same initialization seed, data order, and training settings. We include Informer (2021), PatchTST (2023), WPMixer, and TimeFilter (2025), covering transformer-, patch-, mixing-, and filtering-based designs.
 
-The four settings are fixed before rerunning: ILI (`24->24`) and COVID19 (`36->7`) test small non-stationary datasets; VIX (`96->96`) tests financial volatility; and ETTh1 (`96->96`) is an hourly periodic control. This tests whether the submitted pattern persists beyond a single initialization without multiplying the study across redundant horizons.
+The four settings were fixed before rerunning: ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and the hourly periodic control ETTh1 (`96->96`). This checks whether the submitted pattern persists beyond a single initialization.
 
-Each cell reports three-seed `mean +/- std` MSE/MAE and the paired relative MSE change with a bootstrap 95% confidence interval.
+Each cell reports three-run `mean +/- std` MSE/MAE and the paired relative MSE change with an empirical bootstrap 95% interval. With only three paired runs, these intervals are descriptive and should not be interpreted as formal significance tests.
 
 | Backbone | Variant | ILI 24->24 | COVID19 36->7 | VIX 96->96 | ETTh1 96->96 |
 |---|---|---|---|---|---|
@@ -118,19 +118,19 @@ Each cell reports three-seed `mean +/- std` MSE/MAE and the paired relative MSE 
 | TimeFilter (2025) | Base | 2.341+/-0.304 / 0.908+/-0.031 | 0.333+/-0.005 / 0.222+/-0.004 | 0.955+/-0.004 / 0.551+/-0.005 | 0.389+/-0.001 / 0.389+/-0.001 |
 | TimeFilter (2025) | +DPR | 2.205+/-0.337 / 0.900+/-0.046; gain +6.0% [+3.6, +8.5] | 0.323+/-0.004 / 0.219+/-0.000; gain +3.0% [+0.7, +6.0] | 0.947+/-0.001 / 0.547+/-0.005; gain +0.8% [+0.5, +1.3] | 0.389+/-0.001 / 0.390+/-0.001; gain -0.0% [-0.7, +0.4] |
 
-Across these complementary backbones, Informer has a lower mean MSE on all four settings, with confidence intervals excluding zero on ILI, VIX, and ETTh1, while COVID19 remains statistically inconclusive. PatchTST shows supported gains on ILI, VIX, and ETTh1 and is statistically tied on COVID19. WPMixer has a non-higher mean MSE on all four settings, although every confidence interval includes zero. TimeFilter shows supported gains on ILI, COVID19, and VIX and is statistically tied on ETTh1. These results support stable gains across distinct architectural families while distinguishing statistically supported improvements from ties.
+Mean MSE is lower in all four settings for Informer and PatchTST, and in three with one rounded tie for both TimeFilter and WPMixer. The empirical intervals exclude zero in three of four settings for Informer, PatchTST, and TimeFilter, but in none for WPMixer. With only three paired runs, we treat these as sensitivity patterns rather than formal significance: they support the larger gains but leave the tiny improvements inconclusive.
 
 > **Q4: Why does the adapter table contain 70 rather than all 84 backbone-dataset pairs?**
 
-**A4:** The `70` pairs refer only to the compact main-paper Table 3, not to the full evaluation. The complete `7 backbones x 12 datasets` results, including ETTh2 and ETTm2 at every forecasting horizon, are already reported in Appendix E (the full DPR enhancement table). Thus, no dataset is omitted from the complete experimental evidence.
+**A4:** The `70` pairs refer only to compact main-paper Table 3. Appendix E reports all `7 backbones x 12 datasets` results, including ETTh2 and ETTm2 at every horizon; no dataset is omitted from the complete evaluation.
 
-The main table retained ETTh1 and ETTm1 as representatives of the hourly and 15-minute ETT settings and omitted ETTh2/ETTm2 only to fit the space limit. This choice reflects dataset redundancy rather than result selection: the four ETT subsets share the same energy domain, seven variables, observation period, and strongly periodic structure. Our dataset analysis identifies them as the most homogeneous benchmarks, with low spectral-entropy/VoV profiles and composite scores of 6-9, where strong static backbones are already highly competitive and improvements are naturally small.
+The main table retained ETTh1 and ETTm1 as representatives of the hourly and 15-minute ETT settings and omitted ETTh2/ETTm2 for space. The four subsets share the same energy domain, seven variables, observation period, and strongly periodic structure. Our dataset analysis also identifies them as the most homogeneous benchmarks, with low spectral-entropy/VoV profiles and composite scores of 6-9. We will state this selection rationale and point explicitly to the complete appendix results.
 
-More broadly, our benchmark design intentionally goes beyond the heavily studied ETT-style setting. We include twelve datasets from eight domains, including ILI, COVID19, VIX, NABCPU, Sunspots, and BeijingAir, to evaluate irregular dynamics, volatility shifts, and regime changes that are underrepresented by the four closely related ETT subsets. We make the main-table selection rationale and the pointer to the complete appendix results explicit.
+The full benchmark includes twelve datasets from eight domains, including ILI, COVID19, VIX, NABCPU, Sunspots, and BeijingAir, to cover irregular dynamics, volatility shifts, and regime changes beyond the closely related ETT subsets.
 
 > **Q5: Does adapter gain quantitatively correlate with VoV or spectral entropy?**
 
-**A5:** Yes. Reviewer 9TTx, Q2/A2 defines the dataset-level analysis and reports Spearman correlations using the median DPR gain across seven backbones. We report all diagnostics, including null results, rather than selecting only a favorable correlation.
+**A5:** Yes. Reviewer 9TTx, Q2/A2 defines the dataset-level analysis and reports Spearman correlations using the median DPR gain across seven backbones. It includes all diagnostics and their null results, not only the favorable correlations.
 
 ## Response to Reviewer 8uUP
 
@@ -138,17 +138,17 @@ We thank the reviewer for the questions about the architecture diagram, modern b
 
 > **Q1: Figure 2 appears to place DPR before the backbone, while the equations apply it after the base mapping. Which computation is correct?**
 
-**A1:** The equations give the intended computation: the backbone first produces hidden state `H`, DPR recalibrates `H`, and the corresponding prediction head consumes the modulated representation. We agree that placing the `DPR Adapter` label above the backbone in Figure 2 can make this order visually ambiguous. We will revise the panel so that the flow is explicitly shown as `Backbone -> hidden state H -> DPR -> prediction head`. Reviewer 9TTx, Q1/A1 explains the common late-stage insertion rule and the shared-adapter treatment of multi-scale or multi-branch backbones.
+**A1:** The intended plug-in path is `Backbone -> hidden state H -> DPR -> prediction head`. We agree that Figure 2 and the standalone DPRNet block equations do not distinguish this plug-in placement clearly enough. We will revise the panel and equations so that the plug-in path and DPRNet's internal residual block are shown separately and consistently. Reviewer 9TTx, Q1/A1 explains the common late-stage rule and the treatment of multi-scale or multi-branch backbones.
 
 > **Q2: Is static pattern response really a major bottleneck if models such as OLinear can perform better without DPR?**
 
-**A2:** OLinear and DPR address different aspects of forecasting. OLinear derives one dataset-level orthogonal coordinate system from the training-set temporal correlation matrix and applies it to all samples; its NormLin module additionally models cross-variable interactions. DPR instead uses each token's local temporal context to generate a token-specific feature response. OLinear's strong standalone performance therefore demonstrates the effectiveness of global temporal decorrelation, but does not establish that local response adaptation is unnecessary.
+**A2:** OLinear and DPR address different aspects of forecasting. OLinear derives a dataset-level orthogonal coordinate system from the training-set temporal correlation matrix and applies it to all samples; its NormLin module also models cross-variable interactions. DPR instead uses each token's local temporal context to generate a token-specific feature response. OLinear's strong standalone performance demonstrates the value of global temporal decorrelation, while leaving open whether local response adaptation can provide a complementary benefit.
 
-The mechanism-level test keeps the host architecture fixed. Across seven heterogeneous backbones, adding DPR improves 61 of the 70 pairs in the compact main table, with the complete 84-pair study in Appendix E. Thus, our claim is not that every forecaster requires DPR to be competitive, but that local recalibration provides a broadly useful and complementary capability. Reviewer 9TTx, Q2/A2 provides the regime analysis; Q3/A3 below adds modern backbones and direct plug-in tests.
+The mechanism-level test keeps the host architecture fixed. Across seven backbones, adding DPR yields lower MSE in 61 of the 70 pairs in the compact main table, with all 84 pairs in Appendix E. We therefore do not claim that every competitive forecaster requires DPR. The evidence supports local recalibration as a complementary capability whose value depends on the data regime. Reviewer 9TTx, Q2/A2 provides the regime analysis; Q3/A3 below reports an exploratory check on modern backbones.
 
 > **Q3: How does DPRNet compare with modern baselines such as OLinear, TimeMixer++, and TimeBase?**
 
-**A3:** We report two complementary comparisons under the same splits, look-back windows, horizons, and training budgets. First, the standalone table evaluates DPRNet against OLinear, TimeMixer++, and TimeBase as complete forecasters. Second, the plug-in table compares each modern backbone with and without DPR inserted into its hidden representation. Thus, the first table measures end-to-end forecasting competitiveness, while the second directly tests whether DPR is transferable beyond DPRNet. Each cell reports average MSE/MAE over four predefined horizons. For each backbone, dataset, and horizon in the `+DPR` rows, we report the lowest test MSE (MAE breaks ties) among the submitted configuration and the same three predefined variants used above, then average the four selected horizon results. We retain six representative regimes—ILI, COVID19, VIX, Exchange, ETTh1, and ETTm1—while omitting the two redundant ETT subsets. All methods use the same BasicTS data pipeline, while retaining and disclosing their prescribed method-specific normalization.
+**A3:** We provide two complementary comparisons using the same data splits, look-back windows, and horizons within BasicTS. The standalone table compares complete forecasters; the plug-in table fixes each modern host and adds DPR. Each cell averages four predefined horizons. In the exploratory `+DPR` table, each horizon reports the lowest test MSE (MAE breaks ties) among the submitted configuration and three predefined variants. We evaluate six datasets on ILI, COVID19, VIX, Exchange, ETTh1, and ETTm1.
 
 **Standalone modern-baseline comparison (average MSE/MAE over four horizons)**
 
@@ -172,13 +172,13 @@ The mechanism-level test keeps the host architecture fixed. Across seven heterog
 | TimeBase | 8.859/2.125 | 2.427/0.806 | 1.283/0.792 | 0.518/0.505 | 0.471/0.434 | 0.616/0.514 |
 | TimeBase + DPR | 8.833/2.119 | 2.356/0.771 | 1.276/0.791 | 0.526/0.510 | 0.471/0.433 | 0.532/0.471 |
 
-The plug-in comparison uses the same backbone, data pipeline, and training budget within each pair; only the DPR module is added. By average MSE, OLinear improves on ILI/COVID19/VIX/Exchange, ties on ETTm1, and is slightly weaker on ETTh1; TimeMixer++ improves on all six datasets; and TimeBase improves on ILI/COVID19/VIX/ETTm1, ties on ETTh1, and is weaker on Exchange. Across the 18 backbone-dataset cells, `+DPR` yields 14 improvements, two ties, and two degradations. This supports DPR as a transferable local recalibration module, while also clarifying that the benefit depends on how the host backbone represents temporal context.
+On the displayed rounded averages, `+DPR` yields 14 improvements, two ties, and two degradations across the 18 backbone-dataset cells. OLinear improves on ILI/COVID19/VIX/Exchange, ties on ETTm1, and is slightly weaker on ETTh1; TimeMixer++ improves on all six; and TimeBase improves on ILI/COVID19/VIX/ETTm1, ties on ETTh1, and is weaker on Exchange.
 
 > **Q4: What is the actual training/inference efficiency and memory cost, including the orthogonal regularizer?**
 
-**A4:** We report end-to-end training time, synchronized inference latency, and peak GPU memory rather than infer efficiency only from parameters and FLOPs. The orthogonal loss is training-only; its `O(K^2 d)` Gram computation is included in measured training time.
+**A4:** We report observed end-to-end training time, synchronized inference latency, and peak GPU memory in addition to parameters and FLOPs. The orthogonal loss is training-only; its `O(K^2 d)` Gram computation is included in the measured training time.
 
-Measurements use ETTh1 (`96->96`) on one A800 GPU with batch size 64, 20 warm-up iterations, and 100 synchronized inference iterations. GMACs are normalized per sample to match the convention used in the paper, while latency and memory are measured per batch. We replace `negligible overhead` with separate measured claims for parameters, computation, latency, and memory.
+Measurements use ETTh1 (`96->96`) on one A800 GPU with batch size 64, 20 warm-up iterations, and 100 synchronized inference iterations. GMACs are normalized per sample, while latency and memory are measured per batch. We will replace `negligible overhead` with separate claims for parameters, computation, latency, and memory.
 
 | Model | Params | GMACs/sample | Train s/epoch | Inference ms/batch | Train GB | Inference GB | MSE/MAE |
 |---|---:|---:|---:|---:|---:|---:|---|
@@ -188,13 +188,13 @@ Measurements use ETTh1 (`96->96`) on one A800 GPU with batch size 64, 20 warm-up
 | PatchTST | 1.089M | 0.069 | 198.26 | 3.05 | 0.216 | 0.145 | 0.400/0.397 |
 | DPRNet | 0.602M | 0.028 | 32.85 | 3.06 | 0.185 | 0.136 | 0.397/0.395 |
 
-The orthogonal regularizer does not change the inference graph. During training it adds only the basis Gram computation, `O(K^2 d)`, and this cost is already included in DPRNet's measured training time above. With the default `K=8` and `d=256`, the regularizer operates on a small `8 x 8` Gram matrix; its purpose is to discourage redundant response bases rather than add forecasting capacity.
+The orthogonal regularizer does not change the inference graph. During training, it adds the basis Gram computation, `O(K^2 d)`, which is included in the observed time above. With `K=8` and `d=256`, it operates on an `8 x 8` Gram matrix. This explains its asymptotic cost but does not by itself guarantee negligible wall-clock overhead.
 
 > **Q5: Why use a hidden-feature response basis rather than an orthogonal temporal basis as in TimeBase? Does `K x d` scale poorly?**
 
-**A5:** TimeBase and DPR use the term `basis` for different mathematical objects. TimeBase segments the input and compresses the sequence of historical segments through a low-dimensional temporal bottleneck before decoding future segments; its regularizer reduces redundancy among the extracted temporal components. DPR instead learns feature-response prototypes whose local mixture produces a token-specific `d`-dimensional gain for hidden-state modulation.
+**A5:** TimeBase and DPR use the term `basis` for different mathematical objects. TimeBase segments the input and compresses the sequence of historical segments through a low-dimensional temporal bottleneck before decoding future segments; its regularizer reduces redundancy among the extracted temporal components. DPR learns feature-response prototypes whose local mixture produces a token-specific `d`-dimensional gain for hidden-state modulation. We do not claim that a feature-response basis is universally superior or theoretically optimal.
 
-A TimeBase-style temporal basis therefore cannot directly replace DPR's response basis: it produces a temporal representation or forecast rather than the feature-wise gain required by DPR. The default response table contains only `Kd = 8 x 256 = 2,048` parameters, grows linearly with hidden width, and is independent of look-back length, patch length, and forecast horizon. TimeBase is an effective temporal-compression architecture, whereas DPR's feature-space basis serves the distinct goal of local response recalibration.
+A TimeBase-style temporal basis is therefore not a like-for-like replacement for DPR's response basis: it produces a temporal representation or forecast rather than the feature-wise gain used by DPR. The default response table contains `Kd = 8 x 256 = 2,048` parameters, grows linearly with hidden width, and is independent of look-back length, patch length, and forecast horizon. The two bases serve different roles: temporal compression and local feature-response recalibration, respectively.
 
 The end-to-end profiling in Q4/A4 reports the complete adapter cost, including local perception and context projection, rather than presenting `K x d` in isolation.
 
