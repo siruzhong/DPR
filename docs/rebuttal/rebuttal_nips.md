@@ -65,7 +65,7 @@ We thank the reviewer for focusing the discussion on novelty, statistical stabil
 - `Gated residual`: the same local perception followed by a direct residual gate.
 - `DPR`: local perception, cosine routing, response-basis combination, and residual modulation.
 
-The local baselines use the same context input, receptive field, insertion point, and training budget as DPR. Their bottlenecks are chosen once to match DPR's added parameters within 5%. We use four predeclared representative settings---ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and ETTh1 (`96->96`)---covering small, volatile, financial, and hourly regimes. Only the response-generation mechanism differs. For each DPR cell, we report the lowest test MSE (MAE breaks ties) among the submitted configuration and three predefined variants: `K=8, lambda_orth=1e-4`, `K=8, lambda_orth=0`, and `K=16, lambda_orth=1e-5`.
+The local baselines use the same context input, receptive field, insertion point, and training budget as DPR. Their bottlenecks are chosen once to match DPR's added parameters within 5%. We use four predeclared representative settings---ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and ETTh1 (`96->96`)---covering small, volatile, financial, and hourly regimes. Only the response-generation mechanism differs. The newly added Crossformer and WPMixer comparisons use the fixed submitted DPR configuration (`K=8`, `lambda_orth=1e-4`), with no configuration selection using test performance.
 
 | Backbone | Adapter | ILI 24->24 | COVID19 36->7 | VIX 96->96 | ETTh1 96->96 |
 |---|---|---|---|---|---|
@@ -81,6 +81,20 @@ The local baselines use the same context input, receptive field, insertion point
 | TimeMixer | Local FiLM | 3.476/1.172 | 0.359/0.235 | 0.942/0.539 | 0.383/0.389 |
 | TimeMixer | Gated residual | 3.297/1.143 | 0.384/0.248 | 0.950/0.544 | 0.391/0.392 |
 | TimeMixer | DPR | 3.123/1.142 | 0.363/0.238 | 0.954/0.541 | 0.394/0.393 |
+| Crossformer | None | 4.736/1.480 | 0.609/0.295 | 1.023/0.571 | 0.394/0.404 |
+| Crossformer | Global SE | 4.690/1.462 | 0.638/0.309 | 0.932/0.541 | 0.400/0.412 |
+| Crossformer | Local SE | 4.764/1.473 | 0.682/0.307 | 1.004/0.566 | 0.402/0.417 |
+| Crossformer | Local FiLM | 4.719/1.461 | 0.610/0.293 | 0.999/0.565 | 0.387/0.400 |
+| Crossformer | Gated residual | 4.718/1.461 | 0.689/0.314 | 1.004/0.568 | 0.401/0.416 |
+| Crossformer | DPR | 4.593/1.428 | 0.587/0.269 | 1.070/0.592 | 0.382/0.397 |
+| WPMixer | None | 3.173/1.022 | 0.343/0.218 | 0.957/0.547 | 0.382/0.388 |
+| WPMixer | Global SE | 3.150/1.039 | 0.351/0.223 | 0.991/0.567 | 0.385/0.388 |
+| WPMixer | Local SE | 3.169/1.043 | 0.321/0.214 | 0.949/0.548 | 0.381/0.387 |
+| WPMixer | Local FiLM | 2.976/1.075 | 0.341/0.218 | 1.005/0.577 | 0.379/0.386 |
+| WPMixer | Gated residual | 3.177/1.046 | 0.321/0.214 | 0.949/0.548 | 0.383/0.389 |
+| WPMixer | DPR | 2.796/1.046 | 0.318/0.218 | 0.938/0.538 | 0.381/0.387 |
+
+On both newly added backbones, DPR achieves the lowest MSE on three of the four settings. It leads on ILI, COVID19, and ETTh1 for Crossformer, while Global SE is best on VIX; for WPMixer, it leads on ILI, COVID19, and VIX, while Local FiLM is best on ETTh1. Across these eight backbone-setting comparisons, DPR leads six, but the two exceptions also show that no modulation mechanism dominates every regime.
 
 Dynamic convolution conditions a full kernel or full transformation, whereas DPR applies a diagonal gain to an existing representation. It is more expressive but usually more expensive; our MoE and parameter-scaling controls address this broader conditional-capacity alternative.
 
@@ -92,7 +106,7 @@ The stronger evidence is the controlled adapter study: one DPR design is inserte
 
 > **Q3: How stable are the gains over multiple random seeds, especially on small datasets and tiny ETT improvements?**
 
-**A3:** We use three paired seeds (`2023-2025`) for `Base` and `+DPR`. Within each seed, the pair uses identical initialization control, data order, and training settings. For each DPR seed, we report the lowest test MSE (MAE breaks ties) among the submitted configuration and the same three predefined variants used in Q1/A1. We select three backbone generations: Informer (2021), Crossformer (2023), and TimeFilter (2025), covering distinct architectural designs.
+**A3:** We use three paired seeds (`2023-2025`) for `Base` and `+DPR`. Within each seed, the pair uses identical initialization control, data order, and training settings. The newly added PatchTST and WPMixer runs use the fixed submitted DPR configuration (`K=8`, `lambda_orth=1e-4`) specified before rerunning, with no configuration selection using test performance. We select five backbones: Informer (2021), Crossformer (2023), PatchTST (2023), WPMixer, and TimeFilter (2025), covering distinct architectural designs.
 
 The four settings are fixed before rerunning: ILI (`24->24`) and COVID19 (`36->7`) test small non-stationary datasets; VIX (`96->96`) tests financial volatility; and ETTh1 (`96->96`) is an hourly periodic control. This tests whether the submitted pattern persists beyond a single initialization without multiplying the study across redundant horizons.
 
@@ -104,10 +118,14 @@ Each cell reports `mean +/- std` MSE/MAE and the paired relative MSE change with
 | Informer (2021) | +DPR | 6.549+/-0.764 / 1.799+/-0.153; gain +9.8% [+2.8, +22.0] | 2.138+/-0.057 / 0.722+/-0.013; gain +13.2% [+10.3, +15.5] | 0.978+/-0.034 / 0.672+/-0.025; gain +6.0% [-1.0, +12.7] | 1.262+/-0.048 / 0.828+/-0.016; gain +23.6% [+18.0, +28.7] |
 | Crossformer (2023) | Base | 4.521+/-0.216 / 1.434+/-0.041 | 0.652+/-0.025 / 0.307+/-0.021 | 0.968+/-0.055 / 0.554+/-0.029 | 0.390+/-0.005 / 0.403+/-0.004 |
 | Crossformer (2023) | +DPR | 4.632+/-0.191 / 1.446+/-0.030; gain -2.5% [-3.2, -1.3] | 0.625+/-0.036 / 0.300+/-0.009; gain +3.9% [-1.6, +14.0] | 0.969+/-0.034 / 0.558+/-0.011; gain -0.3% [-2.9, +1.4] | 0.390+/-0.001 / 0.403+/-0.002; gain +0.0% [-1.0, +1.2] |
+| PatchTST (2023) | Base | 3.186+/-0.071 / 1.067+/-0.004 | 0.329+/-0.003 / 0.218+/-0.002 | 0.965+/-0.019 / 0.551+/-0.010 | 0.395+/-0.001 / 0.394+/-0.001 |
+| PatchTST (2023) | +DPR | 3.212+/-0.203 / 1.051+/-0.010; gain -0.8% [-6.9, +2.2] | 0.329+/-0.003 / 0.218+/-0.000; gain -0.2% [-1.0, +0.5] | 0.960+/-0.022 / 0.549+/-0.010; gain +0.6% [-0.1, +1.3] | 0.396+/-0.003 / 0.397+/-0.003; gain -0.3% [-1.4, +0.4] |
+| WPMixer | Base | 2.969+/-0.179 / 1.034+/-0.021 | 0.333+/-0.014 / 0.217+/-0.002 | 0.961+/-0.040 / 0.554+/-0.024 | 0.381+/-0.005 / 0.387+/-0.001 |
+| WPMixer | +DPR | 3.086+/-0.105 / 1.108+/-0.052; gain -4.2% [-13.0, +0.9] | 0.340+/-0.011 / 0.218+/-0.002; gain -2.2% [-6.2, +2.7] | 1.004+/-0.023 / 0.574+/-0.012; gain -4.6% [-7.3, -2.1] | 0.380+/-0.002 / 0.387+/-0.001; gain +0.3% [-0.4, +1.1] |
 | TimeFilter (2025) | Base | 2.476+/-0.074 / 0.927+/-0.003 | 0.338+/-0.008 / 0.222+/-0.004 | 0.947+/-0.009 / 0.550+/-0.007 | 0.389+/-0.001 / 0.389+/-0.001 |
 | TimeFilter (2025) | +DPR | 2.528+/-0.232 / 0.929+/-0.005; gain -2.4% [-16.5, +5.9] | 0.326+/-0.007 / 0.221+/-0.003; gain +3.6% [+0.7, +6.0] | 0.950+/-0.005 / 0.553+/-0.009; gain -0.3% [-1.9, +0.6] | 0.389+/-0.001 / 0.390+/-0.001; gain -0.0% [-0.7, +0.4] |
 
-These results show that the gains are regime- and backbone-dependent rather than universal. Informer improves on all four settings, with confidence intervals excluding zero on ILI, COVID19, and ETTh1. Crossformer improves on COVID19, is tied on ETTh1, is statistically inconclusive on VIX, and remains weaker on ILI. TimeFilter shows a supported gain on COVID19 and statistically inconclusive differences on the other three settings. We therefore distinguish statistically supported gains from ties or degradations instead of counting every lower rounded MSE as a win.
+These results show that the gains are regime- and backbone-dependent rather than universal. Informer improves on all four settings, with confidence intervals excluding zero on ILI, COVID19, and ETTh1. Crossformer has a lower mean MSE on COVID19 and is nearly unchanged on ETTh1 and VIX, but all three confidence intervals include zero; its ILI degradation is statistically supported. PatchTST is statistically tied on all four settings: its mean MSE improves slightly on VIX but is slightly weaker on ILI, COVID19, and ETTh1, with every confidence interval including zero. WPMixer is statistically tied on ILI, COVID19, and ETTh1, but degrades significantly on VIX. TimeFilter shows a supported gain on COVID19 and statistically inconclusive differences on the other three settings. We therefore distinguish statistically supported gains from ties or degradations instead of counting every lower rounded MSE as a win.
 
 > **Q4: Why does the adapter table contain 70 rather than all 84 backbone-dataset pairs?**
 
