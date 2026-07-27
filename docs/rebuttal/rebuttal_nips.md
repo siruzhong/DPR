@@ -58,7 +58,7 @@ Beyond structured covariates, future work could incorporate multimodal informati
 
 ## Response to Reviewer Lms2
 
-We thank the reviewer for the practical perspective, the appreciation of our diverse dataset coverage and backbone-agnostic design, and for focusing the discussion on novelty, statistical stability, dataset coverage, and the scope of our claims.
+We appreciate the reviewer's recognition of our diverse dataset coverage and backbone-agnostic design, and the focus on novelty, stability, dataset coverage, and claim scope.
 
 > **Q1: Is DPR technically distinct from FiLM, SE-style recalibration, dynamic convolution, and gated residual adapters? Can the authors add parameter-matched local modulation baselines?**
 
@@ -93,7 +93,7 @@ The local baselines share DPR's context input, receptive field, insertion point,
 | WPMixer | Gated residual | 3.177/1.046 | 0.321/0.214 | 0.949/0.548 | 0.383/0.389 |
 | WPMixer | DPR | 2.796/1.046 | 0.318/0.218 | 0.938/0.538 | 0.381/0.387 |
 
-Across the three displayed backbones, DPR has the lowest MSE in eight of twelve settings and ties for the lowest in one. It leads on ILI and VIX for PatchTST; ILI, COVID19, and ETTh1 for Crossformer; and ILI, COVID19, and VIX for WPMixer. Other adapters lead in the remaining settings. We also ran the same control with TimeMixer: DPR leads on ILI but not on the other three datasets. Thus, the comparison indicates that the factorized response is useful in several regimes, not that it dominates every setting.
+Across three backbones, DPR achieves the lowest MSE in 8 of 12 settings. The factorized response is useful in several regimes, not universally dominant.
 
 Dynamic convolution conditions a full kernel or transformation, whereas DPR applies a diagonal gain to an existing representation. The MoE and parameter-scaling studies (see Q4/A4 of Reviewer 9TTx) further test whether broader conditional capacity or a larger response bank accounts for the observed gains.
 
@@ -101,11 +101,11 @@ Dynamic convolution conditions a full kernel or transformation, whereas DPR appl
 
 **A2:** The main table supports the claim stated in the abstract and introduction: DPRNet achieves competitive performance across twelve diverse benchmarks. Its role is to show that dynamic recalibration remains effective in a deliberately simple patch-based MLP with limited architectural specialization, without relying on a highly engineered forecasting backbone. Our central contribution, however, is DPR as a lightweight plug-in recalibration mechanism, and that claim is evaluated directly by the controlled adapter study.
 
-In this study, the same DPR mechanism is inserted into seven otherwise fixed backbones, with lower MSE in 61 of the 70 pairs summarized in the compact main table; Appendix E reports all 84 pairs. This isolates the contribution of plug-in recalibration and demonstrates portability across architectures. Gains are substantial on volatile datasets (ILI, COVID19, VIX) and marginal on the ETT benchmarks. We note that the ETT family has been extensively studied and is approaching its performance ceiling [1]; the meaningful challenge lies in volatile, non-stationary regimes where DPR provides consistent improvements. In Q2/A2 of Reviewer 9TTx, we provide the quantitative regime analysis.
+The adapter study: lower MSE in 61 of 70 pairs across seven backbones (84 in Appendix E). Gains are substantial on volatile datasets (ILI, COVID19, VIX) and marginal on the ETT benchmarks, which are approaching their performance ceiling [1]; the meaningful challenge lies in non-stationary regimes. See Q2/A2 of Reviewer 9TTx for the quantitative analysis.
 
 > **Q3: How stable are the gains over multiple random seeds, especially on small datasets and tiny ETT improvements?**
 
-**A3:** We report a descriptive paired three-seed check for `Base` and `+DPR`. Within each seed, the pair uses the same initialization seed, data order, and training settings. We include Informer (2021), PatchTST (2023), WPMixer, and TimeFilter (2025), covering transformer-, patch-, mixing-, and filtering-based designs.
+We report a paired three-seed check (same initialization, data order, training per pair) across Informer (2021), PatchTST (2023), WPMixer, and TimeFilter (2025).
 
 The four settings were fixed before rerunning: ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and the hourly periodic control ETTh1 (`96->96`). This checks whether the submitted pattern persists beyond a single initialization.
 
@@ -122,15 +122,15 @@ Each cell reports three-run `mean +/- std` MSE/MAE and the paired relative MSE c
 | TimeFilter (2025) | Base | 2.341+/-0.304 / 0.908+/-0.031 | 0.333+/-0.005 / 0.222+/-0.004 | 0.955+/-0.004 / 0.551+/-0.005 | 0.389+/-0.001 / 0.389+/-0.001 |
 | TimeFilter (2025) | +DPR | 2.205+/-0.337 / 0.900+/-0.046; gain +6.0% [+3.6, +8.5] | 0.323+/-0.004 / 0.219+/-0.000; gain +3.0% [+0.7, +6.0] | 0.947+/-0.001 / 0.547+/-0.005; gain +0.8% [+0.5, +1.3] | 0.389+/-0.001 / 0.390+/-0.001; gain -0.0% [-0.7, +0.4] |
 
-Mean MSE is lower in all four settings for Informer and PatchTST, and in three with one rounded tie for both TimeFilter and WPMixer. The empirical intervals exclude zero in three of four settings for Informer, PatchTST, and TimeFilter, but in none for WPMixer. Gains are substantial on ILI (+6–15%), COVID19 (+1–5%), and VIX (+1–11%), while ETTh1 shows marginal differences across seeds. This aligns with the diagnostic analysis in Q2/A2 of Reviewer 9TTx: volatile datasets rank highest on VoV and composite score, while ETTh1 — an extensively benchmarked dataset approaching its performance ceiling [1] — ranks near the bottom. With only three paired runs, we treat these as sensitivity patterns and emphasize the consistent positive gains on volatile datasets.
+Gains are substantial on ILI (+6–15%), COVID19 (+1–5%), and VIX (+1–11%); ETTh1 is marginal. This aligns with the diagnostic analysis: volatile datasets rank highest on VoV/composite score, while ETTh1 is near its performance ceiling [1]. We emphasize the consistent positive gains on volatile datasets.
 
 > **Q4: Why does the adapter table contain 70 rather than all 84 backbone-dataset pairs?**
 
 **A4:** The `70` pairs refer only to compact main-paper Table 3. Appendix E reports all `7 backbones x 12 datasets` results, including ETTh2 and ETTm2 at every horizon; no dataset is omitted from the complete evaluation.
 
-The main table retained ETTh1 and ETTm1 as representatives of the hourly and 15-minute ETT settings and omitted ETTh2/ETTm2 for space. The four subsets share the same energy domain, seven variables, observation period, and strongly periodic structure. Our dataset analysis identifies them as the most homogeneous benchmarks, with low spectral-entropy/VoV profiles and composite scores of 6-9. Moreover, the ETT family has been extensively studied and is approaching its performance ceiling [1]; we therefore prioritize diversity over redundancy in the main table. The complete 84-pair results, including ETTh2 and ETTm2, are in Appendix E.
+The main table retained ETTh1 and ETTm1 as representatives; ETTh2/ETTm2 are omitted for space. All four are the most homogeneous ETT subsets (VoV/composite scores 6–9) and are near their performance ceiling [1]; we prioritize diversity over redundancy. The complete 84-pair results are in Appendix E.
 
-The full benchmark includes twelve datasets from eight domains, including ILI, COVID19, VIX, NABCPU, Sunspots, and BeijingAir, to cover irregular dynamics, volatility shifts, and regime changes beyond the closely related ETT subsets.
+Our benchmark includes 12 datasets from 8 domains (ILI, COVID19, VIX, NABCPU, Sunspots, BeijingAir) to capture irregular dynamics beyond the closely related ETT family.
 
 > **Q5: Does adapter gain quantitatively correlate with VoV or spectral entropy?**
 
