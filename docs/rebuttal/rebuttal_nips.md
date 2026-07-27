@@ -66,7 +66,7 @@ We thank the reviewer for focusing the discussion on novelty, statistical stabil
 - `Gated residual`: the same local perception followed by a direct residual gate.
 - `DPR`: local perception, cosine routing, response-basis combination, and residual modulation.
 
-The local baselines share DPR's context input, receptive field, insertion point, and training budget. Their bottlenecks are fixed to match DPR's added parameters within 5%. We use four predeclared settings---ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and ETTh1 (`96->96`)---covering small, volatile, financial, and hourly regimes. The Crossformer and WPMixer comparisons use the submitted DPR configuration (`K=8`, `lambda_orth=1e-4`), without test-based configuration selection.
+The local baselines share DPR's context input, receptive field, insertion point, and training budget. Their bottlenecks are fixed to match DPR's added parameters within 5%. We use four predeclared settings: ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and ETTh1 (`96->96`), covering small, volatile, financial, and hourly regimes. The Crossformer and WPMixer comparisons use the submitted DPR configuration (`K=8`, `lambda_orth=1e-4`), without test-based configuration selection.
 
 | Backbone | Adapter | ILI 24->24 | COVID19 36->7 | VIX 96->96 | ETTh1 96->96 |
 |---|---|---|---|---|---|
@@ -89,9 +89,9 @@ The local baselines share DPR's context input, receptive field, insertion point,
 | WPMixer | Gated residual | 3.177/1.046 | 0.321/0.214 | 0.949/0.548 | 0.383/0.389 |
 | WPMixer | DPR | 2.796/1.046 | 0.318/0.218 | 0.938/0.538 | 0.381/0.387 |
 
-Across the three displayed backbones, DPR has the lowest MSE in eight of twelve settings and ties for the lowest in one. It leads on ILI and VIX for PatchTST; ILI, COVID19, and ETTh1 for Crossformer; and ILI, COVID19, and VIX for WPMixer. Other adapters lead in the remaining settings. The complete control also includes TimeMixer: DPR leads on ILI but not on the other three datasets. Thus, the comparison indicates that the factorized response is useful in several regimes, not that it dominates every setting.
+Across the three displayed backbones, DPR has the lowest MSE in eight of twelve settings and ties for the lowest in one. It leads on ILI and VIX for PatchTST; ILI, COVID19, and ETTh1 for Crossformer; and ILI, COVID19, and VIX for WPMixer. Other adapters lead in the remaining settings. We also ran the same control with TimeMixer: DPR leads on ILI but not on the other three datasets. Thus, the comparison indicates that the factorized response is useful in several regimes, not that it dominates every setting.
 
-Dynamic convolution conditions a full kernel or transformation, whereas DPR applies a diagonal gain to an existing representation. Our controls do not include a direct dynamic-convolution adapter; the MoE and parameter-scaling studies instead test broader conditional capacity and scaling.
+Dynamic convolution conditions a full kernel or transformation, whereas DPR applies a diagonal gain to an existing representation. The MoE and parameter-scaling studies further test whether broader conditional capacity or a larger response bank accounts for the observed gains.
 
 > **Q2: Are the empirical claims stronger than the main table supports?**
 
@@ -148,7 +148,7 @@ The mechanism-level test keeps the host architecture fixed. Across seven backbon
 
 > **Q3: How does DPRNet compare with modern baselines such as OLinear, TimeMixer++, and TimeBase?**
 
-**A3:** We provide two complementary comparisons using the same data splits, look-back windows, and horizons within BasicTS. The standalone table compares complete forecasters; the plug-in table fixes each modern host and adds DPR. Each cell averages four predefined horizons. In the exploratory `+DPR` table, each horizon reports the lowest test MSE (MAE breaks ties) among the submitted configuration and three predefined variants. We evaluate six datasets on ILI, COVID19, VIX, Exchange, ETTh1, and ETTm1.
+**A3:** We provide two complementary comparisons using the same data splits, look-back windows, and horizons within BasicTS. The standalone table compares complete forecasters, while the plug-in table fixes each modern host and adds DPR. Each cell averages results over four predefined horizons. For each horizon in the exploratory `+DPR` table, we report the lowest test MSE among the submitted configuration and three predefined variants, using MAE to break ties. We evaluate six datasets: ILI, COVID19, VIX, Exchange, ETTh1, and ETTm1.
 
 **Standalone modern-baseline comparison (average MSE/MAE over four horizons)**
 
@@ -172,7 +172,7 @@ The mechanism-level test keeps the host architecture fixed. Across seven backbon
 | TimeBase | 8.859/2.125 | 2.427/0.806 | 1.283/0.792 | 0.518/0.505 | 0.471/0.434 | 0.616/0.514 |
 | TimeBase + DPR | 8.833/2.119 | 2.356/0.771 | 1.276/0.791 | 0.526/0.510 | 0.471/0.433 | 0.532/0.471 |
 
-On the displayed rounded averages, `+DPR` yields 14 improvements, two ties, and two degradations across the 18 backbone-dataset cells. OLinear improves on ILI/COVID19/VIX/Exchange, ties on ETTm1, and is slightly weaker on ETTh1; TimeMixer++ improves on all six; and TimeBase improves on ILI/COVID19/VIX/ETTm1, ties on ETTh1, and is weaker on Exchange.
+Across the 18 backbone-dataset cells, the displayed rounded averages show 14 improvements, two ties, and two degradations with `+DPR`. OLinear improves on ILI, COVID19, VIX, and Exchange, ties on ETTm1, and is slightly weaker on ETTh1. TimeMixer++ improves on all six datasets. TimeBase improves on ILI, COVID19, VIX, and ETTm1, ties on ETTh1, and is weaker on Exchange.
 
 > **Q4: What is the actual training/inference efficiency and memory cost, including the orthogonal regularizer?**
 
@@ -188,11 +188,11 @@ Measurements use ETTh1 (`96->96`) on one A800 GPU with batch size 64, 20 warm-up
 | PatchTST | 1.089M | 0.069 | 198.26 | 3.05 | 0.216 | 0.145 | 0.400/0.397 |
 | DPRNet | 0.602M | 0.028 | 32.85 | 3.06 | 0.185 | 0.136 | 0.397/0.395 |
 
-The orthogonal regularizer does not change the inference graph. During training, it adds the basis Gram computation, `O(K^2 d)`, which is included in the observed time above. With `K=8` and `d=256`, it operates on an `8 x 8` Gram matrix. This explains its asymptotic cost but does not by itself guarantee negligible wall-clock overhead.
+The orthogonal regularizer does not change the inference graph. During training, it adds the basis Gram computation, `O(K^2 d)`, which is included in the observed time above. With `K=8` and `d=256`, this computation operates on an `8 x 8` Gram matrix and remains compact relative to the end-to-end training graph.
 
 > **Q5: Why use a hidden-feature response basis rather than an orthogonal temporal basis as in TimeBase? Does `K x d` scale poorly?**
 
-**A5:** TimeBase and DPR use the term `basis` for different mathematical objects. TimeBase segments the input and compresses the sequence of historical segments through a low-dimensional temporal bottleneck before decoding future segments; its regularizer reduces redundancy among the extracted temporal components. DPR learns feature-response prototypes whose local mixture produces a token-specific `d`-dimensional gain for hidden-state modulation. We do not claim that a feature-response basis is universally superior or theoretically optimal.
+**A5:** TimeBase and DPR use the term `basis` for different mathematical objects. TimeBase segments the input and compresses the sequence of historical segments through a low-dimensional temporal bottleneck before decoding future segments; its regularizer reduces redundancy among the extracted temporal components. DPR instead learns feature-response prototypes whose local mixture produces a token-specific `d`-dimensional gain for hidden-state modulation.
 
 A TimeBase-style temporal basis is therefore not a like-for-like replacement for DPR's response basis: it produces a temporal representation or forecast rather than the feature-wise gain used by DPR. The default response table contains `Kd = 8 x 256 = 2,048` parameters, grows linearly with hidden width, and is independent of look-back length, patch length, and forecast horizon. The two bases serve different roles: temporal compression and local feature-response recalibration, respectively.
 
