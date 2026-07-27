@@ -106,26 +106,26 @@ The stronger evidence is the controlled adapter study: one DPR design is inserte
 
 > **Q3: How stable are the gains over multiple random seeds, especially on small datasets and tiny ETT improvements?**
 
-**A3:** We use three paired seeds (`2023-2025`) for `Base` and `+DPR`. Within each seed, the pair uses identical initialization control, data order, and training settings. The newly added PatchTST and WPMixer runs use the fixed submitted DPR configuration (`K=8`, `lambda_orth=1e-4`) specified before rerunning, with no configuration selection using test performance. We select five backbones: Informer (2021), Crossformer (2023), PatchTST (2023), WPMixer, and TimeFilter (2025), covering distinct architectural designs.
+**A3:** We report paired three-seed results for `Base` and `+DPR`. Within each seed, Base and DPR use identical initialization control, data order, and training settings. We select five backbones: Informer (2021), Crossformer (2023), PatchTST (2023), WPMixer, and TimeFilter (2025), covering distinct architectural designs.
 
 The four settings are fixed before rerunning: ILI (`24->24`) and COVID19 (`36->7`) test small non-stationary datasets; VIX (`96->96`) tests financial volatility; and ETTh1 (`96->96`) is an hourly periodic control. This tests whether the submitted pattern persists beyond a single initialization without multiplying the study across redundant horizons.
 
-Each cell reports `mean +/- std` MSE/MAE and the paired relative MSE change with a bootstrap 95% confidence interval.
+Each cell reports three-seed `mean +/- std` MSE/MAE and the paired relative MSE change with a bootstrap 95% confidence interval.
 
 | Backbone | Variant | ILI 24->24 | COVID19 36->7 | VIX 96->96 | ETTh1 96->96 |
 |---|---|---|---|---|---|
-| Informer (2021) | Base | 7.258+/-0.051 / 1.919+/-0.010 | 2.463+/-0.042 / 0.826+/-0.018 | 1.042+/-0.046 / 0.690+/-0.012 | 1.654+/-0.059 / 0.932+/-0.027 |
-| Informer (2021) | +DPR | 6.549+/-0.764 / 1.799+/-0.153; gain +9.8% [+2.8, +22.0] | 2.138+/-0.057 / 0.722+/-0.013; gain +13.2% [+10.3, +15.5] | 0.978+/-0.034 / 0.672+/-0.025; gain +6.0% [-1.0, +12.7] | 1.262+/-0.048 / 0.828+/-0.016; gain +23.6% [+18.0, +28.7] |
-| Crossformer (2023) | Base | 4.521+/-0.216 / 1.434+/-0.041 | 0.652+/-0.025 / 0.307+/-0.021 | 0.968+/-0.055 / 0.554+/-0.029 | 0.390+/-0.005 / 0.403+/-0.004 |
-| Crossformer (2023) | +DPR | 4.632+/-0.191 / 1.446+/-0.030; gain -2.5% [-3.2, -1.3] | 0.625+/-0.036 / 0.300+/-0.009; gain +3.9% [-1.6, +14.0] | 0.969+/-0.034 / 0.558+/-0.011; gain -0.3% [-2.9, +1.4] | 0.390+/-0.001 / 0.403+/-0.002; gain +0.0% [-1.0, +1.2] |
-| PatchTST (2023) | Base | 3.186+/-0.071 / 1.067+/-0.004 | 0.329+/-0.003 / 0.218+/-0.002 | 0.965+/-0.019 / 0.551+/-0.010 | 0.395+/-0.001 / 0.394+/-0.001 |
-| PatchTST (2023) | +DPR | 3.212+/-0.203 / 1.051+/-0.010; gain -0.8% [-6.9, +2.2] | 0.329+/-0.003 / 0.218+/-0.000; gain -0.2% [-1.0, +0.5] | 0.960+/-0.022 / 0.549+/-0.010; gain +0.6% [-0.1, +1.3] | 0.396+/-0.003 / 0.397+/-0.003; gain -0.3% [-1.4, +0.4] |
-| WPMixer | Base | 2.969+/-0.179 / 1.034+/-0.021 | 0.333+/-0.014 / 0.217+/-0.002 | 0.961+/-0.040 / 0.554+/-0.024 | 0.381+/-0.005 / 0.387+/-0.001 |
-| WPMixer | +DPR | 3.086+/-0.105 / 1.108+/-0.052; gain -4.2% [-13.0, +0.9] | 0.340+/-0.011 / 0.218+/-0.002; gain -2.2% [-6.2, +2.7] | 1.004+/-0.023 / 0.574+/-0.012; gain -4.6% [-7.3, -2.1] | 0.380+/-0.002 / 0.387+/-0.001; gain +0.3% [-0.4, +1.1] |
-| TimeFilter (2025) | Base | 2.476+/-0.074 / 0.927+/-0.003 | 0.338+/-0.008 / 0.222+/-0.004 | 0.947+/-0.009 / 0.550+/-0.007 | 0.389+/-0.001 / 0.389+/-0.001 |
-| TimeFilter (2025) | +DPR | 2.528+/-0.232 / 0.929+/-0.005; gain -2.4% [-16.5, +5.9] | 0.326+/-0.007 / 0.221+/-0.003; gain +3.6% [+0.7, +6.0] | 0.950+/-0.005 / 0.553+/-0.009; gain -0.3% [-1.9, +0.6] | 0.389+/-0.001 / 0.390+/-0.001; gain -0.0% [-0.7, +0.4] |
+| Informer (2021) | Base | 7.192+/-0.163 / 1.906+/-0.033 | 1.920+/-0.950 / 0.688+/-0.257 | 1.071+/-0.008 / 0.681+/-0.015 | 1.642+/-0.076 / 0.927+/-0.032 |
+| Informer (2021) | +DPR | 6.106+/-0.760 / 1.756+/-0.130; gain +15.2% [+4.4, +22.0] | 1.718+/-0.673 / 0.631+/-0.168; gain +5.0% [-14.2, +15.5] | 0.957+/-0.033 / 0.662+/-0.014; gain +10.6% [+6.3, +12.9] | 1.177+/-0.100 / 0.804+/-0.030; gain +28.3% [+24.0, +32.3] |
+| Crossformer (2023) | Base | 4.539+/-0.238 / 1.439+/-0.048 | 0.639+/-0.036 / 0.297+/-0.017 | 0.968+/-0.055 / 0.554+/-0.029 | 0.390+/-0.004 / 0.402+/-0.002 |
+| Crossformer (2023) | +DPR | 4.582+/-0.165 / 1.434+/-0.027; gain -1.0% [-3.2, +3.0] | 0.604+/-0.032 / 0.289+/-0.020; gain +5.4% [-1.6, +14.0] | 0.974+/-0.038 / 0.556+/-0.010; gain -0.7% [-2.9, +1.4] | 0.388+/-0.005 / 0.402+/-0.004; gain +0.6% [-1.0, +3.0] |
+| PatchTST (2023) | Base | 3.326+/-0.275 / 1.072+/-0.008 | 0.330+/-0.005 / 0.217+/-0.002 | 0.950+/-0.008 / 0.543+/-0.003 | 0.395+/-0.001 / 0.393+/-0.001 |
+| PatchTST (2023) | +DPR | 3.052+/-0.048 / 1.048+/-0.008; gain +7.9% [+2.2, +14.5] | 0.327+/-0.001 / 0.217+/-0.000; gain +1.0% [-0.2, +2.4] | 0.942+/-0.006 / 0.541+/-0.004; gain +0.9% [+0.2, +1.5] | 0.392+/-0.001 / 0.393+/-0.002; gain +0.7% [+0.3, +1.3] |
+| WPMixer | Base | 3.042+/-0.211 / 1.037+/-0.015 | 0.333+/-0.015 / 0.218+/-0.001 | 0.969+/-0.034 / 0.558+/-0.021 | 0.380+/-0.002 / 0.387+/-0.001 |
+| WPMixer | +DPR | 2.840+/-0.059 / 1.049+/-0.004; gain +6.4% [-0.7, +11.9] | 0.328+/-0.009 / 0.218+/-0.000; gain +1.4% [-5.9, +7.3] | 0.962+/-0.021 / 0.554+/-0.014; gain +0.6% [-3.3, +3.2] | 0.380+/-0.001 / 0.387+/-0.000; gain +0.0% [-0.4, +0.3] |
+| TimeFilter (2025) | Base | 2.341+/-0.304 / 0.908+/-0.031 | 0.333+/-0.005 / 0.222+/-0.004 | 0.955+/-0.004 / 0.551+/-0.005 | 0.389+/-0.001 / 0.389+/-0.001 |
+| TimeFilter (2025) | +DPR | 2.205+/-0.337 / 0.900+/-0.046; gain +6.0% [+3.6, +8.5] | 0.323+/-0.004 / 0.219+/-0.000; gain +3.0% [+0.7, +6.0] | 0.947+/-0.001 / 0.547+/-0.005; gain +0.8% [+0.5, +1.3] | 0.389+/-0.001 / 0.390+/-0.001; gain -0.0% [-0.7, +0.4] |
 
-These results show that the gains are regime- and backbone-dependent rather than universal. Informer improves on all four settings, with confidence intervals excluding zero on ILI, COVID19, and ETTh1. Crossformer has a lower mean MSE on COVID19 and is nearly unchanged on ETTh1 and VIX, but all three confidence intervals include zero; its ILI degradation is statistically supported. PatchTST is statistically tied on all four settings: its mean MSE improves slightly on VIX but is slightly weaker on ILI, COVID19, and ETTh1, with every confidence interval including zero. WPMixer is statistically tied on ILI, COVID19, and ETTh1, but degrades significantly on VIX. TimeFilter shows a supported gain on COVID19 and statistically inconclusive differences on the other three settings. We therefore distinguish statistically supported gains from ties or degradations instead of counting every lower rounded MSE as a win.
+These results show that the gains are regime- and backbone-dependent rather than universal. Informer has a lower mean MSE on all four settings, with confidence intervals excluding zero on ILI, VIX, and ETTh1, while COVID19 remains statistically inconclusive. Crossformer has lower mean MSE on COVID19 and ETTh1 and higher mean MSE on ILI and VIX, but all four confidence intervals include zero. PatchTST shows supported gains on ILI, VIX, and ETTh1 and is statistically tied on COVID19. WPMixer has a non-higher mean MSE on all four settings, but every confidence interval includes zero. TimeFilter shows supported gains on ILI, COVID19, and VIX and is statistically tied on ETTh1. We therefore distinguish statistically supported gains from ties or degradations instead of counting every lower rounded MSE as a win.
 
 > **Q4: Why does the adapter table contain 70 rather than all 84 backbone-dataset pairs?**
 
