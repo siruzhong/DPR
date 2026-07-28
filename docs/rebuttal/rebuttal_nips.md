@@ -194,7 +194,7 @@ The mechanism-level test keeps the host architecture fixed. Across seven backbon
 
 **A4:** We report observed end-to-end training time, synchronized inference latency, and peak GPU memory in addition to parameters and FLOPs. The orthogonal loss is training-only; its `O(K^2 d)` Gram computation is included in the measured training time.
 
-Measurements use ETTh1 (`96->96`) on one A800 GPU with batch size 64, 20 warm-up iterations, and 100 synchronized inference iterations. GMACs are normalized per sample, while latency and memory are measured per batch. We will expand the efficiency discussion to separately report parameters, computation, latency, and memory.
+Measurements use ETTh1 (96->96) on one A800 GPU with batch size 64, 20 warm-up iterations, and 100 synchronized inference iterations. GMACs are normalized per sample, while latency and memory are measured per batch. We will expand the efficiency discussion to separately report parameters, computation, latency, and memory.
 
 | Model | Params | GMACs/sample | Train s/epoch | Inference ms/batch | Train GB | Inference GB | MSE/MAE |
 |---|---:|---:|---:|---:|---:|---:|---|
