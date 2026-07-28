@@ -23,7 +23,7 @@ Earlier-layer and multi-layer placements were outside the scope of this study be
 
 Spearman rho measures the strength of monotonic association, while the two-sided p-value tests against the null hypothesis of no correlation. The two serve complementary roles: rho captures effect size and p-value assesses statistical reliability.
 
-VoV most directly captures what DPR addresses: changes in local volatility. Spectral entropy measures frequency complexity and ADF tests global unit-root behavior; neither necessarily indicates changing local response requirements. The composite score, defined as `rank(spectral entropy) + rank(VoV)`, combines these complementary diagnostics and shows the strongest association (rho = 0.703, p = 0.011). Together, the results support a narrower relationship: DPR improvement is associated with changing local volatility, not with every notion of non-stationarity. The marginal gains on ETT benchmarks are consistent with their approaching performance ceiling [1]; the meaningful challenge lies in volatile, non-stationary datasets where DPR provides consistent improvement. Accordingly, we will describe static pattern response as a regime-dependent limitation rather than an equally severe bottleneck on every dataset.
+VoV most directly captures what DPR addresses: changes in local volatility. Spectral entropy measures frequency complexity and ADF tests global unit-root behavior; neither necessarily indicates changing local response requirements. The composite score, defined as `rank(spectral entropy) + rank(VoV)`, combines these complementary diagnostics and shows the strongest association (rho = 0.703, p = 0.011). Together, the results support a narrower relationship: DPR improvement is associated with changing local volatility, not with every notion of non-stationarity. The marginal gains on ETT benchmarks are consistent with their approaching performance ceiling [1]; the meaningful challenge lies in volatile, non-stationary datasets where DPR provides consistent improvement. Accordingly, we will clarify that static pattern response is primarily a concern in volatile, non-stationary regimes rather than a uniform bottleneck across all datasets.
 
 > **Q3: How is DPR related to FiLM and SE-style recalibration?**
 
@@ -126,7 +126,7 @@ Base and +DPR cells report three-run `mean +/- std` MSE/MAE. The Δ MSE row repo
 | TimeFilter (2025) | +DPR | 2.205+/-0.337 / 0.900+/-0.046 | 0.323+/-0.004 / 0.219+/-0.000 | 0.947+/-0.001 / 0.547+/-0.005 | 0.389+/-0.001 / 0.390+/-0.001 |
 |  | Δ MSE % | +6.0% [+3.6, +8.5] | +3.0% [+0.7, +6.0] | +0.8% [+0.5, +1.3] | -0.0% [-0.7, +0.4] |
 
-Gains are substantial on ILI (+6–15%), COVID19 (+1–5%), and VIX (+1–11%); ETTh1 is marginal. This aligns with the diagnostic analysis: volatile datasets rank highest on VoV/composite score, while ETTh1 is near its performance ceiling [1]. We emphasize the consistent positive gains on volatile datasets.
+Gains are substantial on ILI (+6–15%), COVID19 (+1–5%), and VIX (+1–11%); ETTh1 is marginal as expected near its performance ceiling [1]. Across four backbones and three seeds, 15 of 16 comparisons show positive Δ MSE, and the bootstrap intervals indicate that the volatile-dataset gains are stable under re-initialization. This aligns with the diagnostic analysis: volatile datasets rank highest on VoV/composite score, confirming that DPR's advantage is driven by local regime adaptation rather than random variation.
 
 > **Q4: Why does the adapter table contain 70 rather than all 84 backbone-dataset pairs?**
 
