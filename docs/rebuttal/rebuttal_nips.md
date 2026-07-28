@@ -70,9 +70,9 @@ We appreciate the focus on novelty, stability, and claim scope. Below we address
 - `Gated residual`: the same local perception followed by a direct residual gate.
 - `DPR`: local perception, cosine routing, response-basis combination, and residual modulation.
 
-The local baselines share DPR's context input, receptive field, insertion point, and training budget. Their bottlenecks are fixed to match DPR's added parameters within 5%. We use four predeclared settings: ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and ETTh1 (`96->96`), covering small, volatile, financial, and hourly regimes.
+The local baselines share DPR's context input, receptive field, insertion point, and training budget. Their bottlenecks are fixed to match DPR's added parameters within 5%. We use four predeclared settings covering small, volatile, financial, and hourly regimes: ILI (24->24), COVID19 (36->7), VIX (96->96), and ETTh1 (96->96).
 
-| Backbone | Adapter | ILI 24->24 | COVID19 36->7 | VIX 96->96 | ETTh1 96->96 |
+| Backbone | Adapter | ILI | COVID19 | VIX | ETTh1 |
 |---|---|---|---|---|---|
 | PatchTST | None | 3.633/1.079 | 0.335/0.216 | 0.942/0.539 | 0.394/0.392 |
 | PatchTST | Global SE | 3.352/1.049 | 0.329/0.218 | 0.950/0.548 | **0.392/0.393** |
@@ -107,11 +107,11 @@ The adapter study: lower MSE in 61 of 70 pairs across seven backbones (84 in App
 
 We report a paired three-seed check (same initialization, data order, training per pair) across Informer (2021), PatchTST (2023), WPMixer, and TimeFilter (2025).
 
-The four settings were fixed before rerunning: ILI (`24->24`), COVID19 (`36->7`), VIX (`96->96`), and the hourly periodic control ETTh1 (`96->96`). This checks whether the submitted pattern persists beyond a single initialization.
+The four settings were fixed before rerunning: ILI (24->24), COVID19 (36->7), VIX (96->96), and the hourly periodic control ETTh1 (96->96). This checks whether the submitted pattern persists beyond a single initialization.
 
 Base and +DPR cells report three-run `mean +/- std` MSE/MAE. The Δ MSE row reports the paired relative MSE change with an empirical bootstrap 95% interval. With only three paired runs, these intervals are descriptive and should not be interpreted as formal significance tests.
 
-| Backbone | Variant | ILI 24->24 | COVID19 36->7 | VIX 96->96 | ETTh1 96->96 |
+| Backbone | Variant | ILI | COVID19 | VIX | ETTh1 |
 |---|---|---|---|---|---|
 | Informer (2021) | Base | 7.192+/-0.163 / 1.906+/-0.033 | 1.920+/-0.950 / 0.688+/-0.257 | 1.071+/-0.008 / 0.681+/-0.015 | 1.642+/-0.076 / 0.927+/-0.032 |
 | Informer (2021) | +DPR | 6.106+/-0.760 / 1.756+/-0.130 | 1.718+/-0.673 / 0.631+/-0.168 | 0.957+/-0.033 / 0.662+/-0.014 | 1.177+/-0.100 / 0.804+/-0.030 |
